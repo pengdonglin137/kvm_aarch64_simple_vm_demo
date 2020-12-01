@@ -1,0 +1,7 @@
+*.o
+*.dump
+*.bin
+*.d
+*.map
+guest
+simple_virt
