@@ -68,8 +68,9 @@ int main(int argc, const char *argv[])
 	ret = read(guest_fd, userspace_addr, 0x1000);
 	assert(ret > 0);
 
-	// 将上面分配的共享内存映射（HVA）到客户机的0x100000物理地址（GPA）上
-	// 当客户机使用GPA访问这段内存时，会发生缺页异常，陷入EL2
+	// 将上面分配的共享内存(HVA)到客户机的0x100000物理地址(GPA)的映射注册到KVM中
+	// 
+	// 当客户机使用GPA(IPA)访问这段内存时，会发生缺页异常，陷入EL2
 	// EL2会在异常处理函数中根据截获的GPA查找上面提前注册的映射信息得到HVA
 	// 然后根据HVA找到HPA，最后创建一个将GPA到HPA的映射，并将映射信息填写到
 	// VTTBR_EL2指向的stage2页表中，这个跟intel架构下的EPT技术类似
