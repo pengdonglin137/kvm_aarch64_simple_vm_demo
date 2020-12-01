@@ -35,31 +35,44 @@ int main(int argc, const char *argv[])
 	void *userspace_addr;
 	__u64 guest_entry = 0x100000;
 
+    // 打开kvm模块
 	kvm_fd = open(KVM_DEV, O_RDWR);
 	assert(kvm_fd > 0);
 
+    // 创建一个虚拟机
 	vm_fd = ioctl(kvm_fd, KVM_CREATE_VM, 0);
 	assert(vm_fd > 0);
 
+    // 创建一个VCPU
 	vcpu_fd = ioctl(vm_fd, KVM_CREATE_VCPU, 0);
 	assert(vcpu_fd > 0);
 
+    // 获取共享数据空间的大小
 	mmap_size = ioctl(kvm_fd, KVM_GET_VCPU_MMAP_SIZE, NULL);
 	assert(mmap_size > 0);
 
+    // 将共享数据空间映射到用户空间
 	kvm_run = (struct kvm_run *)mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpu_fd, 0);
 	assert(kvm_run >= 0);
 
+    // 打开客户机镜像
 	guest_fd = open(GUEST_BIN, O_RDONLY);
 	assert(guest_fd > 0);
 
+    // 分配一段匿名共享内存，下面会将这段共享内存映射到客户机中，作为客户机看到的物理地址
 	userspace_addr = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE,
 		MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	assert(userspace_addr > 0);
 
+    // 将客户机镜像装载到共享内存中
 	ret = read(guest_fd, userspace_addr, 0x1000);
 	assert(ret > 0);
 
+    // 将上面分配的共享内存映射（HVA）到客户机的0x100000物理地址（GPA）上
+    // 当客户机使用GPA访问这段内存时，会发生缺页异常，陷入EL2
+    // EL2会在异常处理函数中根据截获的GPA查找上面提前注册的映射信息得到HVA
+    // 然后根据HVA找到HPA，最后创建一个将GPA到HPA的映射，并将映射信息填写到
+    // VTTBR_EL2指向的stage2页表中，这个跟intel架构下的EPT技术类似
 	mem.slot = 0;
 	mem.flags = 0;
 	mem.guest_phys_addr = (__u64)0x100000;
@@ -68,20 +81,25 @@ int main(int argc, const char *argv[])
 	ret = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem);
 	assert(ret >= 0);
 
+    // 设置cpu的初始信息，因为host使用qemu模拟的cortex-a57，所以这里要
+    // 将target设置为KVM_ARM_TARGET_CORTEX_A57
 	bzero(&init, sizeof(init));
 	init.target = KVM_ARM_TARGET_CORTEX_A57;
 	ret = ioctl(vcpu_fd, KVM_ARM_VCPU_INIT, &init);
 	assert(ret >= 0);
 
+    // 设置从host进入虚拟机后cpu第一条指令的地址，也就是上面的0x100000
 	reg.id = AARCH64_CORE_REG(regs.pc);
 	reg.addr = (__u64)&guest_entry;
 	ret = ioctl(vcpu_fd, KVM_SET_ONE_REG, &reg);
 	assert(ret >= 0);
 
 	while(1) {
+	    // 启动虚拟机
 		ret = ioctl(vcpu_fd, KVM_RUN, NULL);
 		assert(ret >= 0);
 
+        // 根据虚拟机退出的原因完成相应的操作
 		switch (kvm_run->exit_reason) {
 		case KVM_EXIT_MMIO:
 			if (kvm_run->mmio.is_write && kvm_run->mmio.len == 1) {
