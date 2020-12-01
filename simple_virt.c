@@ -9,10 +9,15 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <linux/stddef.h>
 #include <linux/kvm.h>
+#include <strings.h>
+
+#include "register.h"
 
 #define KVM_DEV		"/dev/kvm"
 #define GUEST_BIN	"./guest.bin"
+#define AARCH64_CORE_REG(x)		(KVM_REG_ARM64 | KVM_REG_SIZE_U64 | KVM_REG_ARM_CORE | KVM_REG_ARM_CORE_REG(x))
 
 int main(int argc, const char *argv[])
 {
@@ -26,7 +31,9 @@ int main(int argc, const char *argv[])
 	struct kvm_userspace_memory_region mem;
 	struct kvm_run *kvm_run;
 	struct kvm_one_reg reg;
+	struct kvm_vcpu_init init;
 	void *userspace_addr;
+	__u64 guest_entry = 0x100000;
 
 	kvm_fd = open(KVM_DEV, O_RDWR);
 	assert(kvm_fd > 0);
@@ -37,10 +44,16 @@ int main(int argc, const char *argv[])
 	vcpu_fd = ioctl(vm_fd, KVM_CREATE_VCPU, 0);
 	assert(vcpu_fd > 0);
 
+	mmap_size = ioctl(kvm_fd, KVM_GET_VCPU_MMAP_SIZE, NULL);
+	assert(mmap_size > 0);
+
+	kvm_run = (struct kvm_run *)mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpu_fd, 0);
+	assert(kvm_run >= 0);
+
 	guest_fd = open(GUEST_BIN, O_RDONLY);
 	assert(guest_fd > 0);
 
-	userspace_addr = mmap(NULL, 0x2000, PROT_READ|PROT_WRITE,
+	userspace_addr = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE,
 		MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	assert(userspace_addr > 0);
 
@@ -49,21 +62,19 @@ int main(int argc, const char *argv[])
 
 	mem.slot = 0;
 	mem.flags = 0;
-	mem.guest_phys_addr = 0x100000;
-	mem.userspace_addr = (unsigned long)userspace_addr;
-	mem.memory_size = 0x200000;
+	mem.guest_phys_addr = (__u64)0x100000;
+	mem.userspace_addr = (__u64)userspace_addr;
+	mem.memory_size = (__u64)0x1000;
 	ret = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem);
-	assert(ret > 0);
-	mmap_size = ioctl(kvm_fd, KVM_GET_VCPU_MMAP_SIZE, NULL):
-	assert(mmap_size > 0);
+	assert(ret >= 0);
 
-	kvm_run = (struct kvm_run *)mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpu_fd, 0);
-	assert(kvm_run >= 0);
-
-#define AARCH64_CORE_REG(x)		(KVM_REG_ARM64 | KVM_REG_SIZE_U64 | KVM_REG_ARM_CORE | KVM_REG_ARM_CORE_REG(x))
+	bzero(&init, sizeof(init));
+	init.target = KVM_ARM_TARGET_CORTEX_A57;
+	ret = ioctl(vcpu_fd, KVM_ARM_VCPU_INIT, &init);
+	assert(ret >= 0);
 
 	reg.id = AARCH64_CORE_REG(regs.pc);
-	reg.addr = 0x100000;
+	reg.addr = (__u64)&guest_entry;
 	ret = ioctl(vcpu_fd, KVM_SET_ONE_REG, &reg);
 	assert(ret >= 0);
 
@@ -72,11 +83,27 @@ int main(int argc, const char *argv[])
 		assert(ret >= 0);
 
 		switch (kvm_run->exit_reason) {
+		case KVM_EXIT_MMIO:
+			if (kvm_run->mmio.is_write && kvm_run->mmio.len == 1) {
+				if (kvm_run->mmio.phys_addr == OUT_PORT) {
+					printf("%c", kvm_run->mmio.data[0]);
+				} else if (kvm_run->mmio.phys_addr == EXIT_REG){
+					printf("Guest Exist!\n");
+					close(kvm_fd);
+					close(guest_fd);
+					goto exit_virt;
+				}
+			} else if (!kvm_run->mmio.is_write && kvm_run->mmio.len == 1) {
+				if (kvm_run->mmio.phys_addr == IN_PORT)
+					kvm_run->mmio.data[0] = 'G';
+			}
+			break;
 		default:
-			 printf("Unknow exit reason: %d\n", kvm_run->exit_reason);
-			 break;
+			printf("Unknow exit reason: %d\n", kvm_run->exit_reason);
+			goto exit_virt;
 		}
 	}
 
+exit_virt:
 	return 0;
 }

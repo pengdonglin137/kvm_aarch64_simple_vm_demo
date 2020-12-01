@@ -1,19 +1,29 @@
+#include "register.h"
+
+void print(const char *buf)
+{
+	while(buf && *buf)
+		*(unsigned char *)OUT_PORT = *buf++;
+}
+
+char getchar(void)
+{
+	return *(char *)IN_PORT;
+}
+
 int main(void)
 {
-	char *buffer = (char *)0x10;
+	char ch[2];
 
-	buffer[0] = 'h';
-	buffer[1] = 'e';
-	buffer[2] = 'l';
-	buffer[3] = 'l';
-	buffer[4] = 'o';
-	buffer[5] = ' ';
-	buffer[6] = 'w';
-	buffer[7] = 'o';
-	buffer[8] = 'r';
-	buffer[9] = 'l';
-	buffer[10] = 'd';
-	buffer[11] = '\0';
+	print("Hello World! I am a Guest!\n");
+
+	ch[0] = getchar();
+	ch[1] = '\0';
+
+	print("Get From Host: ");
+	print(ch);
+
+	print("\n");
 
 	return 0;
 }

@@ -5,6 +5,7 @@ OBJDUMP=aarch64-elf-objdump
 CFLAGS=-Wall
 
 all: simple_virt guest
+	cp ./guest.bin ./simple_virt ../../share/
 
 simple_virt:simple_virt.c
 	aarch64-linux-gnu-gcc $< -I./kernel_header/include -o $@

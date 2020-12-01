@@ -36,6 +36,7 @@
 #include <linux/types.h>
 #include <asm/ptrace.h>
 #include <asm/sve_context.h>
+#include <linux/stddef.h>
 
 #define __KVM_HAVE_GUEST_DEBUG
 #define __KVM_HAVE_IRQ_LINE
@@ -178,7 +179,8 @@ struct kvm_vcpu_events {
 
 /* Normal registers are mapped as coprocessor 16. */
 #define KVM_REG_ARM_CORE		(0x0010 << KVM_REG_ARM_COPROC_SHIFT)
-#define KVM_REG_ARM_CORE_REG(name)	(offsetof(struct kvm_regs, name) / sizeof(__u32))
+#define offsetof__(TYPE, MEMBER)	((size_t)&((TYPE *)0)->MEMBER)
+#define KVM_REG_ARM_CORE_REG(name)	(offsetof__(struct kvm_regs, name) / sizeof(__u32))
 
 /* Some registers need more space to represent values. */
 #define KVM_REG_ARM_DEMUX		(0x0011 << KVM_REG_ARM_COPROC_SHIFT)
