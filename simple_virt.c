@@ -104,16 +104,20 @@ int main(int argc, const char *argv[])
 		case KVM_EXIT_MMIO:
 			if (kvm_run->mmio.is_write && kvm_run->mmio.len == 1) {
 				if (kvm_run->mmio.phys_addr == OUT_PORT) {
+				    // 输出guest写入到OUT_PORT中的信息
 					printf("%c", kvm_run->mmio.data[0]);
 				} else if (kvm_run->mmio.phys_addr == EXIT_REG){
-					printf("Guest Exist!\n");
+				    // Guest退出
+					printf("Guest Exit!\n");
 					close(kvm_fd);
 					close(guest_fd);
 					goto exit_virt;
 				}
 			} else if (!kvm_run->mmio.is_write && kvm_run->mmio.len == 1) {
-				if (kvm_run->mmio.phys_addr == IN_PORT)
+				if (kvm_run->mmio.phys_addr == IN_PORT) {
+				    // 客户机从IN_PORT发起读请求
 					kvm_run->mmio.data[0] = 'G';
+				}
 			}
 			break;
 		default:
