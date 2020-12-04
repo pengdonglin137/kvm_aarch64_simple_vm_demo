@@ -33,7 +33,7 @@ int main(int argc, const char *argv[])
 	struct kvm_one_reg reg;
 	struct kvm_vcpu_init init;
 	void *userspace_addr;
-	__u64 guest_entry = 0x100000;
+	__u64 guest_entry = ENTRY_POINT;
 
 	// 打开kvm模块
 	kvm_fd = open(KVM_DEV, O_RDWR);
@@ -60,12 +60,12 @@ int main(int argc, const char *argv[])
 	assert(guest_fd > 0);
 
 	// 分配一段匿名共享内存，下面会将这段共享内存映射到客户机中，作为客户机看到的物理地址
-	userspace_addr = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE,
+	userspace_addr = mmap(NULL, RAM_SIZE, PROT_READ|PROT_WRITE,
 		MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	assert(userspace_addr > 0);
 
 	// 将客户机镜像装载到共享内存中
-	ret = read(guest_fd, userspace_addr, 0x1000);
+	ret = read(guest_fd, userspace_addr + ENTRY_OFFSET, RAM_SIZE);
 	assert(ret > 0);
 
 	// 将上面分配的共享内存(HVA)到客户机的0x100000物理地址(GPA)的映射注册到KVM中
@@ -76,9 +76,9 @@ int main(int argc, const char *argv[])
 	// VTTBR_EL2指向的stage2页表中，这个跟intel架构下的EPT技术类似
 	mem.slot = 0;
 	mem.flags = 0;
-	mem.guest_phys_addr = (__u64)0x100000;
+	mem.guest_phys_addr = (__u64)RAM_START;
 	mem.userspace_addr = (__u64)userspace_addr;
-	mem.memory_size = (__u64)0x1000;
+	mem.memory_size = (__u64)RAM_SIZE;
 	ret = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem);
 	assert(ret >= 0);
 

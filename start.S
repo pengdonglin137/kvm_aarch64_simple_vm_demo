@@ -4,7 +4,7 @@
 	.global start
 	.text
 start:
-	ldr x0, =SP_REG
+	ldr x0, =SP_ADDR
 	mov sp, x0
 
 	/* Clear BSS */

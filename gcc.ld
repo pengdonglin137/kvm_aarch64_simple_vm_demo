@@ -4,7 +4,7 @@ ENTRY(start)
 
 SECTIONS
 {
-	. = 0x100000;
+	. = 0x101000;
 
 	.text :
 	{
