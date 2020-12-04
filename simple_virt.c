@@ -109,7 +109,7 @@ int main(int argc, const char *argv[])
 					printf("%c", kvm_run->mmio.data[0]);
 				} else if (kvm_run->mmio.phys_addr == EXIT_REG){
 					// Guest退出
-					printf("Guest Exit!\n");
+					printf("<Guest Exit!>\n");
 					close(kvm_fd);
 					close(guest_fd);
 					goto exit_virt;

@@ -8,25 +8,30 @@ SECTIONS
 
 	.text :
 	{
+		start.o (.text*)
 		*(.text*)
 	}
 
 	.rodata :
 	{
-		. = ALIGN(8);
+		. = ALIGN(16);
 		*(.rodata*)
 	}
 
 	.data :
 	{
-		. = ALIGN(8);
+		. = ALIGN(16);
 		*(.data*)
 	}
 
 	.bss :
 	{
-		. = ALIGN(8);
+		. = ALIGN(16);
+		__BSS_START__ = .;
 		*(.bss*)
 		*(COMMON)
+		. = ALIGN(16);
+		__BSS_END__ = .;
 	}
+	__BSS_SIZE__ = SIZEOF(.bss);
 }
