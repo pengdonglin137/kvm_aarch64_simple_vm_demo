@@ -1,5 +1,5 @@
-#include "misc.h"
-#include "register.h"
+#include <misc.h>
+#include <register.h>
 
 uintptr_t read_current_el(void)
 {

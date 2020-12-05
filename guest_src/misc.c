@@ -1,6 +1,6 @@
-#include "stdarg.h"
-#include "misc.h"
-#include "register.h"
+#include <localstdarg.h>
+#include <misc.h>
+#include <register.h>
 
 #define get_num_va_args(_args, _lcount)				\
 	(((_lcount) > 1)  ? va_arg(_args, long long int) :	\

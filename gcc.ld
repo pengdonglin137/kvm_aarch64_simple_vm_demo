@@ -8,7 +8,7 @@ SECTIONS
 
 	.text :
 	{
-		start.o (.text*)
+		obj/start.o (.text*)
 		*(.text*)
 	}
 

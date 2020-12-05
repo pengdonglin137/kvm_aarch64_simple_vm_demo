@@ -13,7 +13,7 @@
 #include <linux/kvm.h>
 #include <strings.h>
 
-#include "register.h"
+#include <register.h>
 
 #define KVM_DEV		"/dev/kvm"
 #define GUEST_BIN	"./guest.bin"
