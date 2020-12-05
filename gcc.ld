@@ -34,4 +34,13 @@ SECTIONS
 		__BSS_END__ = .;
 	}
 	__BSS_SIZE__ = SIZEOF(.bss);
+
+	.stack :
+	{
+		. = ALIGN(16);
+		. = . + 0x20000;
+		. = ALIGN(16);
+		__stack = .;
+	}
 }
+

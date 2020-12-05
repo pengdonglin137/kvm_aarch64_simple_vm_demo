@@ -1,11 +1,18 @@
 #include "register.h"
 
+#define CPACR_EL1_FPEN    (3 << 20)
+
 	.global main
 	.global start
+	.global panic
 	.text
 start:
-	ldr x0, =SP_ADDR
+	ldr x0, =__stack
 	mov sp, x0
+
+	// Enable floating point
+	mov x0, #CPACR_EL1_FPEN
+	msr CPACR_EL1, x0
 
 	/* Clear BSS */
 	ldr x0, =__BSS_START__
@@ -21,3 +28,4 @@ clear_loop:
 	mov x0, #1
 	strb w0, [x1]
 	b .
+

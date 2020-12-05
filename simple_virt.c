@@ -34,6 +34,7 @@ int main(int argc, const char *argv[])
 	struct kvm_vcpu_init init;
 	void *userspace_addr;
 	__u64 guest_entry = ENTRY_POINT;
+	__u64 guest_pstate;
 
 	// 打开kvm模块
 	kvm_fd = open(KVM_DEV, O_RDWR);
@@ -92,6 +93,13 @@ int main(int argc, const char *argv[])
 	// 设置从host进入虚拟机后cpu第一条指令的地址，也就是上面的0x100000
 	reg.id = AARCH64_CORE_REG(regs.pc);
 	reg.addr = (__u64)&guest_entry;
+	ret = ioctl(vcpu_fd, KVM_SET_ONE_REG, &reg);
+	assert(ret >= 0);
+
+	// 设置guest的运行状态
+	guest_pstate = PSR_MODE_EL1h | PSR_F_BIT | PSR_I_BIT;
+	reg.id = AARCH64_CORE_REG(regs.pstate);
+	reg.addr = (__u64)&guest_pstate;
 	ret = ioctl(vcpu_fd, KVM_SET_ONE_REG, &reg);
 	assert(ret >= 0);
 
