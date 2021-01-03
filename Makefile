@@ -31,7 +31,7 @@ RM_FILES = $(foreach file,$(1),rm -f $(file)$(EOL))
 RM_DIRS = $(foreach dir,$(1),rm -rf $(dir)$(EOL))
 
 DEPEND_FLAGS = -MD -MF $@.d
-CPPFLAGS_EXTRA += -ffunction-sections -fdata-sections -nostdinc
+CPPFLAGS_EXTRA += -ffunction-sections -fdata-sections -nostdinc -fno-builtin
 CPPFLAGS = $(DEFINES) $(INCLUDES) $(DEPEND_FLAGS) $(CPPFLAGS_EXTRA)
 CFLAGS = $(DEBUG_FLAGS) -O$(OPT_LEVEL)
 ASFLAGS = $(DEBUG_FLAGS)
